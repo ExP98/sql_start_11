@@ -1,0 +1,87 @@
+Задача 1.
+Напишите запрос, который выведет пилотов, которые в качестве второго пилота в августе этого года трижды ездили в аэропорт Шереметьево.
+
+SELECT 
+  plt.* 
+FROM 
+  (
+    SELECT 
+      second_pilot_id 
+    FROM 
+      Рейсы 
+    WHERE 
+      YEAR(flight_dt) = 2022 
+      AND MONTH(flight_dt) = 8 
+      AND destination = 'Шереметьево' 
+    GROUP BY 
+      second_pilot_id 
+    HAVING 
+      count(*) > 3
+  ) t 
+  JOIN Пилоты plt ON plt.pilot_id = t.second_pilot_id;
+
+Задача 2. 
+Выведите пилотов старше 45 лет, которые совершали полеты на самолетах с количеством пассажиров больше 30.
+
+SELECT 
+  plt.* 
+FROM 
+  (
+    SELECT 
+      DISTINCT flg.first_pilot_id 
+    FROM 
+      Рейсы flg 
+      JOIN Самолеты pln ON pln.plane_id = flg.plane_id 
+    WHERE 
+      pln.cargo_flg = 0 
+      AND pln.capacity > 30 -- flg.quantity > 30) t
+      JOIN Пилоты plt ON plt.pilot_id = t.first_pilot_id 
+    WHERE 
+      plt.age > 45 
+UNION 
+SELECT 
+  plt.* 
+FROM 
+  (
+    SELECT 
+      DISTINCT flg.second_pilot_id 
+    FROM 
+      Рейсы flg 
+      JOIN Самолеты pln ON pln.plane_id = flg.plane_id 
+    WHERE 
+      pln.cargo_flg = 0 
+      AND pln.capacity > 30 -- flg.quantity > 30) t
+      JOIN Пилоты plt ON plt.pilot_id = t.second_pilot_id 
+    WHERE 
+      plt.age > 45;
+
+Задача 3.
+Выведите ТОП10 пилотов-капитанов (first_pilot_id), которые совершили наибольшее число грузовых перелетов в этом году.
+
+SELECT
+  *
+FROM
+  (
+    SELECT
+      plt.*,
+      RANK() OVER(
+        ORDER BY
+          t.flg_count DESC
+      ) as rank
+    FROM
+      (
+        SELECT
+          flg.first_pilot_id as fpid,
+          count(*) as flg_count
+        FROM
+          Рейсы flg
+          JOIN Самолеты pln ON pln.plane_id = flg.plane_id
+        WHERE
+          pln.cargo_flg = 1
+        GROUP BY
+          flg.first_pilot_id
+      ) t
+      JOIN Пилоты plt ON plt.pilot_id = t.fpid
+  ) t2
+WHERE
+  t2.rank <= 10;
